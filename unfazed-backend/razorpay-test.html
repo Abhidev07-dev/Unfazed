@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unfazed — Your Care, Your Pace</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --green: #163d32;
+      --green-dark: #102e26;
+      --cream: #f8f6f0;
+      --white: #fffefa;
+      --muted: #777d75;
+      --border: #e6e5dc;
+      --gold: #c9a86a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--cream);
+      color: #202b25;
+      font-family: "DM Sans", sans-serif;
+    }
+
+    nav {
+      height: 82px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 8%;
+      border-bottom: 1px solid var(--border);
+      background: var(--white);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 22px;
+      letter-spacing: -0.8px;
+    }
+
+    .brand-mark {
+      width: 39px;
+      height: 39px;
+      background: var(--green);
+      color: white;
+      border-radius: 13px;
+      display: grid;
+      place-items: center;
+      font-family: "Playfair Display", serif;
+      font-size: 23px;
+    }
+
+    .secure {
+      color: var(--muted);
+      font-size: 13px;
+      display: flex;
+      gap: 7px;
+      align-items: center;
+    }
+
+    main {
+      max-width: 1120px;
+      margin: 65px auto;
+      padding: 0 24px;
+    }
+
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #647c69;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      font-family: "Playfair Display", serif;
+      font-size: clamp(38px, 5vw, 58px);
+      font-weight: 500;
+      line-height: 1.12;
+      letter-spacing: -1.5px;
+      max-width: 660px;
+      margin: 0;
+    }
+
+    .intro {
+      color: var(--muted);
+      line-height: 1.8;
+      max-width: 550px;
+      margin: 18px 0 40px;
+      font-size: 15px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 25px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 30px;
+      box-shadow: 0 15px 45px rgba(27, 48, 34, 0.045);
+    }
+
+    .package-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+
+    .tag {
+      font-size: 11px;
+      background: #edf2e9;
+      color: var(--green);
+      border-radius: 30px;
+      padding: 8px 12px;
+      font-weight: 700;
+    }
+
+    h2 {
+      font-family: "Playfair Display", serif;
+      font-size: 30px;
+      font-weight: 500;
+      margin: 0 0 10px;
+    }
+
+    .subtext {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .price {
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: -1.5px;
+      margin: 24px 0 5px;
+    }
+
+    .price small {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--muted);
+      letter-spacing: 0;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 26px 0;
+    }
+
+    .benefit {
+      display: flex;
+      gap: 12px;
+      margin: 17px 0;
+      font-size: 14px;
+      align-items: center;
+    }
+
+    .check {
+      background: #eaf0e5;
+      color: var(--green);
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      font-size: 12px;
+    }
+
+    .summary-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 25px;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 19px 0;
+      font-size: 14px;
+    }
+
+    .summary-row span:first-child {
+      color: var(--muted);
+    }
+
+    .total {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 12px;
+      padding: 17px;
+      background: var(--green);
+      color: white;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s, transform .2s;
+      margin-top: 20px;
+    }
+
+    button:hover {
+      background: var(--green-dark);
+      transform: translateY(-2px);
+    }
+
+    button:disabled {
+      opacity: .65;
+      cursor: wait;
+      transform: none;
+    }
+
+    .privacy {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.7;
+      text-align: center;
+      margin-top: 16px;
+    }
+
+    #result {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      padding: 30px 20px;
+    }
+
+    @media (max-width: 720px) {
+      nav { padding: 0 20px; height: 70px; }
+      main { margin: 40px auto; }
+      .layout { grid-template-columns: 1fr; }
+      .card { padding: 24px; }
+      .secure { font-size: 11px; }
+    }
+  </style>
+</head>
+
+<body>
+  <nav>
+    <div class="brand">
+      <div class="brand-mark">U</div>
+      unfazed
+    </div>
+    <div class="secure">✦ Secure checkout</div>
+  </nav>
+
+  <main>
+    <div class="eyebrow">A little investment in yourself</div>
+    <h1>Your wellbeing deserves a space of its own.</h1>
+    <p class="intro">
+      Take the next step at your own pace. Review your session package
+      below and continue to our secure payment provider.
+    </p>
+
+    <div class="layout">
+      <section class="card">
+        <div class="package-top">
+          <span class="tag">YOUR SELECTED PLAN</span>
+          <span class="subtext">01 / 01</span>
+        </div>
+
+        <h2>Starter Package</h2>
+        <p class="subtext">
+          A thoughtful beginning to your therapy journey.
+        </p>
+
+        <div class="price">₹3,000 <small>/ package</small></div>
+        <p class="subtext">₹1,000 per session</p>
+
+        <div class="divider"></div>
+
+        <div class="benefit">
+          <span class="check">✓</span>
+          <span>3 therapy sessions</span>
+        </div>
+        <div class="benefit">
+          <span class="check">✓</span>
+          <span>Valid for 45 days from purchase</span>
+        </div>
+        <div class="benefit">
+          <span class="check">✓</span>
+          <span>Scheduling through your therapist</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="summary-title">Order summary</div>
+
+        <div class="summary-row">
+          <span>Starter Package</span>
+          <span>₹3,000</span>
+        </div>
+        <div class="summary-row">
+          <span>Sessions included</span>
+          <span>3</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="summary-row total">
+          <span>Total</span>
+          <span>₹3,000</span>
+        </div>
+
+        <button id="payButton">Continue to secure payment →</button>
+
+        <div class="privacy">
+          Payments are processed by Razorpay. This demo uses
+          Razorpay Test Mode; no real payment should be made.
+        </div>
+
+        <pre id="result"></pre>
+      </section>
+    </div>
+  </main>
+
+  <footer>Unfazed · Care, with clarity.</footer>
+
+  <script>
+    const orderId = "order_Tn2GXUMzB9rsKd";
+    const keyId = "rzp_test_TkIk45RwEkOoOl";
+
+    const button = document.getElementById("payButton");
+    const result = document.getElementById("result");
+
+    button.addEventListener("click", () => {
+      if (keyId === "YOUR_RAZORPAY_TEST_KEY_ID") {
+        result.textContent = "Add your Razorpay Test Key ID to the HTML first.";
+        return;
+      }
+
+      if (typeof Razorpay === "undefined") {
+        result.textContent = "Razorpay Checkout did not load. Check your internet connection.";
+        return;
+      }
+
+      const checkout = new Razorpay({
+        key: keyId,
+        amount: 300000,
+        currency: "INR",
+        name: "Unfazed",
+        description: "Starter Package — 3 sessions",
+        order_id: orderId,
+        theme: { color: "#163d32" },
+
+       
+handler: async function (response) {
+  result.textContent = "Payment response received. Verifying…";
+  console.log("RAZORPAY HANDLER RAN", response);
+
+  try {
+    // Log in to obtain a fresh JWT
+    const email = prompt("Enter your therapist login email:");
+    const password = prompt("Enter your therapist login password:");
+
+    if (!email || !password) {
+      result.textContent = "Login cancelled. Payment has not been verified by this page.";
+      return;
+    }
+
+    const loginRes = await fetch("http://localhost:5000/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ email, password })
+    });
+
+    const loginData = await loginRes.json();
+
+    if (!loginRes.ok || !loginData.token) {
+      throw new Error(loginData.message || "Therapist login failed.");
+    }
+
+    result.textContent = "Logged in. Verifying payment…";
+
+    // Verify the genuine Razorpay checkout response
+    const res = await fetch("http://localhost:5000/api/payments/verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + loginData.token
+      },
+      body: JSON.stringify({
+        razorpay_order_id: response.razorpay_order_id,
+        razorpay_payment_id: response.razorpay_payment_id,
+        razorpay_signature: response.razorpay_signature
+      })
+    });
+
+    const data = await res.json();
+
+    console.log("BACKEND VERIFICATION RESPONSE", res.status, data);
+
+    result.textContent = res.ok
+      ? "Verification response:\n" + JSON.stringify(data, null, 2)
+      : "Verification failed:\n" + JSON.stringify(data, null, 2);
+
+  
+  } catch (error) {
+    console.error("Payment verification error:", error);
+    result.textContent = "Verification error: " + error.message;
+  }
+}
+      });
+
+      checkout.on("payment.failed", function (response) {
+        result.textContent =
+          "Test payment failed: " +
+          (response.error.description || "Unknown error");
+      });
+
+      checkout.open();
+    });
+  </script>
+</body>
+</html>
