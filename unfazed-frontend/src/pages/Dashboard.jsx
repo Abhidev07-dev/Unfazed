@@ -1,6 +1,8 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../api/axiosInstance";
+import { disconnectSocket } from "../utils/socket";
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -20,64 +22,51 @@ function Dashboard() {
       return;
     }
 
-    const getDashboardData = async () => {
+    async function getDashboardData() {
       try {
         const config = {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` }
         };
 
-        const [
-          profileResponse,
-          clientsResponse,
-          paymentsResponse,
-          sessionsResponse,
-        ] = await Promise.all([
-          axiosInstance.get("/therapists/me", config),
-          axiosInstance.get("/clients", config),
-          axiosInstance.get("/payments", config),
-          axiosInstance.get("/scheduling/sessions", config),
-        ]);
+        const [profile, clientsRes, paymentsRes, sessionsRes] =
+          await Promise.all([
+            axiosInstance.get("/therapists/me", config),
+            axiosInstance.get("/clients", config),
+            axiosInstance.get("/payments", config),
+            axiosInstance.get("/scheduling/sessions", config)
+          ]);
 
-        setTherapist(profileResponse.data.therapist);
+        setTherapist(profile.data.therapist);
 
-        const clients = clientsResponse.data.clients || [];
+        const clients = clientsRes.data.clients || [];
         setClientCount(clients.length);
 
-        const payments = paymentsResponse.data.payments || [];
-
-        const paidRevenue = payments
-          .filter((payment) => payment.status === "paid")
-          .reduce(
-            (total, payment) => total + Number(payment.amount || 0),
-            0
-          );
-
-        setRevenue(paidRevenue);
-
-        const sessions = sessionsResponse.data.sessions || [];
-        const now = new Date();
-
-        const upcoming = sessions.filter(
-          (session) =>
-            session.status === "booked" &&
-            new Date(session.date) > now
+        const payments = paymentsRes.data.payments || [];
+        setRevenue(
+          payments
+            .filter((payment) => payment.status === "paid")
+            .reduce(
+              (total, payment) => total + Number(payment.amount || 0),
+              0
+            )
         );
 
-        setUpcomingSessions(upcoming.length);
+        const sessions = sessionsRes.data.sessions || [];
+        setUpcomingSessions(
+          sessions.filter(
+            (session) =>
+              session.status === "booked" &&
+              new Date(session.date) > new Date()
+          ).length
+        );
       } catch (err) {
         console.error(
           "DASHBOARD ERROR:",
           err.response?.data || err.message
         );
 
-        if (
-          err.response?.status === 401 ||
-          err.response?.status === 403
-        ) {
-          localStorage.removeItem("token");
-          navigate("/login");
+        if (err.response?.status === 401) {
+          handleLogout();
         } else {
           setError(
             "Some dashboard data could not be loaded. Please refresh."
@@ -86,13 +75,14 @@ function Dashboard() {
       } finally {
         setLoading(false);
       }
-    };
+    }
 
     getDashboardData();
   }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    disconnectSocket();
     navigate("/login");
   };
 
@@ -101,18 +91,26 @@ function Dashboard() {
     border: "1px solid #222",
     borderRadius: "16px",
     padding: "30px",
-    minWidth: 0,
+    minWidth: 0
   };
 
-  const labelStyle = {
-    color: "#888",
+  const secondaryButtonStyle = {
+    background: "#171717",
+    color: "white",
+    border: "1px solid #333",
+    padding: "13px 22px",
+    borderRadius: "9px",
+    fontWeight: "600",
     fontSize: "15px",
+    cursor: "pointer"
   };
 
-  const valueStyle = {
-    fontSize: "40px",
-    margin: "20px 0 0",
-    overflowWrap: "anywhere",
+  const primaryButtonStyle = {
+    ...secondaryButtonStyle,
+    background: "white",
+    color: "#111",
+    border: "none",
+    fontWeight: "700"
   };
 
   if (loading) {
@@ -122,7 +120,7 @@ function Dashboard() {
           minHeight: "100vh",
           background: "#0b0b0b",
           color: "white",
-          padding: "40px",
+          padding: "40px"
         }}
       >
         <h2>Loading your practice...</h2>
@@ -138,7 +136,7 @@ function Dashboard() {
         background: "#0b0b0b",
         color: "white",
         padding: "30px 6%",
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "Arial, sans-serif"
       }}
     >
       <header
@@ -148,36 +146,20 @@ function Dashboard() {
           alignItems: "center",
           gap: "20px",
           borderBottom: "1px solid #222",
-          paddingBottom: "25px",
+          paddingBottom: "25px"
         }}
       >
         <div style={{ fontSize: "25px", fontWeight: "700" }}>
           unfazed.
         </div>
 
-        <button
-          onClick={handleLogout}
-          style={{
-            background: "transparent",
-            color: "#aaa",
-            border: "1px solid #333",
-            padding: "10px 18px",
-            borderRadius: "8px",
-            cursor: "pointer",
-          }}
-        >
+        <button onClick={handleLogout} style={secondaryButtonStyle}>
           Log out
         </button>
       </header>
 
       <main style={{ paddingTop: "60px" }}>
-        <p
-          style={{
-            color: "#888",
-            fontSize: "13px",
-            letterSpacing: "2px",
-          }}
-        >
+        <p style={{ color: "#888", fontSize: "13px", letterSpacing: "2px" }}>
           THERAPIST DASHBOARD
         </p>
 
@@ -186,37 +168,76 @@ function Dashboard() {
             fontSize: "clamp(30px, 4vw, 52px)",
             letterSpacing: "-2px",
             margin: "10px 0",
-            overflowWrap: "anywhere",
+            overflowWrap: "anywhere"
           }}
         >
           Good to see you,{" "}
           <span style={{ color: "#888" }}>
             {therapist?.name || "Therapist"}
-          </span>
-          .
+          </span>.
         </h1>
 
         <p style={{ color: "#888", fontSize: "17px" }}>
           Here's what's happening with your practice.
         </p>
-        
-<button
-  onClick={() => navigate("/book-session")}
-  style={{
-    background: "white",
-    color: "#111",
-    border: "none",
-    padding: "13px 22px",
-    borderRadius: "9px",
-    fontWeight: "700",
-    fontSize: "15px",
-    cursor: "pointer",
-    marginTop: "15px"
-  }}
->
-  + Book a Session
-</button>
 
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "12px",
+            marginTop: "20px"
+          }}
+        >
+          <button
+            onClick={() => navigate("/book-session")}
+            style={primaryButtonStyle}
+          >
+            + Book a Session
+          </button>
+
+          <button
+            onClick={() => navigate("/sessions")}
+            style={secondaryButtonStyle}
+          >
+            View All Sessions →
+          </button>
+
+          <button
+            onClick={() => navigate("/clients")}
+            style={secondaryButtonStyle}
+          >
+            Manage Clients →
+          </button>
+
+          <button
+            onClick={() => navigate("/payments")}
+            style={secondaryButtonStyle}
+          >
+            Payments & Packages →
+          </button>
+
+          <button
+            onClick={() => navigate("/analytics")}
+            style={secondaryButtonStyle}
+          >
+            📊 Analytics →
+          </button>
+
+          <button
+            onClick={() => navigate("/manage-availability")}
+            style={secondaryButtonStyle}
+          >
+            🗓️ Manage Availability →
+          </button>
+
+          <button
+            onClick={() => navigate("/chat")}
+            style={secondaryButtonStyle}
+          >
+            💬 Client Messages →
+          </button>
+        </div>
 
         {error && (
           <p
@@ -227,7 +248,7 @@ function Dashboard() {
               border: "1px solid #482626",
               padding: "14px",
               borderRadius: "8px",
-              marginTop: "25px",
+              marginTop: "25px"
             }}
           >
             {error}
@@ -239,28 +260,34 @@ function Dashboard() {
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
             gap: "20px",
-            marginTop: "45px",
+            marginTop: "45px"
           }}
         >
           <section style={cardStyle}>
-            <p style={labelStyle}>Active Clients</p>
-            <h2 style={valueStyle}>{clientCount}</h2>
+            <p style={{ color: "#888", fontSize: "15px" }}>Active Clients</p>
+            <h2 style={{ fontSize: "40px", margin: "20px 0 0" }}>
+              {clientCount}
+            </h2>
             <p style={{ color: "#666", fontSize: "12px" }}>
               Clients in your practice
             </p>
           </section>
 
           <section style={cardStyle}>
-            <p style={labelStyle}>Upcoming Sessions</p>
-            <h2 style={valueStyle}>{upcomingSessions}</h2>
+            <p style={{ color: "#888", fontSize: "15px" }}>
+              Upcoming Sessions
+            </p>
+            <h2 style={{ fontSize: "40px", margin: "20px 0 0" }}>
+              {upcomingSessions}
+            </h2>
             <p style={{ color: "#666", fontSize: "12px" }}>
               Future sessions marked as booked
             </p>
           </section>
 
           <section style={cardStyle}>
-            <p style={labelStyle}>Revenue</p>
-            <h2 style={valueStyle}>
+            <p style={{ color: "#888", fontSize: "15px" }}>Revenue</p>
+            <h2 style={{ fontSize: "40px", margin: "20px 0 0" }}>
               ₹{revenue.toLocaleString("en-IN")}
             </h2>
             <p style={{ color: "#666", fontSize: "12px" }}>
@@ -269,28 +296,14 @@ function Dashboard() {
           </section>
         </div>
 
-        <section
-          style={{
-            ...cardStyle,
-            marginTop: "35px",
-          }}
-        >
-          <p
-            style={{
-              color: "#888",
-              fontSize: "12px",
-              letterSpacing: "2px",
-            }}
-          >
+        <section style={{ ...cardStyle, marginTop: "35px" }}>
+          <p style={{ color: "#888", fontSize: "12px", letterSpacing: "2px" }}>
             YOUR PROFILE
           </p>
-
           <h2>{therapist?.name || "Therapist"}</h2>
-
           <p style={{ color: "#888" }}>
             {therapist?.email || "No email available"}
           </p>
-
           <p style={{ color: "#888" }}>
             Public profile: /{therapist?.slug || "your-profile"}
           </p>

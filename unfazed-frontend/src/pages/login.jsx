@@ -1,13 +1,14 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../api/axiosInstance";
+import { connectSocket } from "../utils/socket";
 
 function Login() {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -23,19 +24,28 @@ function Login() {
         password
       });
 
-      console.log("Login successful:", response.data);
+      const token = response.data.token;
 
-      // Save JWT
-      localStorage.setItem("token", response.data.token);
+      if (!token) {
+        throw new Error("Login succeeded but no token was returned.");
+      }
 
-      // Go directly to dashboard
+      localStorage.setItem("token", token);
+
+      console.log("✅ Login successful.");
+      console.log("🔌 Attempting Socket.IO connection...");
+
+      const started = connectSocket(token);
+
+      console.log("Socket connection started:", started);
+
       navigate("/dashboard");
-
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error("Login error:", err);
 
       setError(
-        error.response?.data?.message ||
+        err.response?.data?.message ||
+        err.message ||
         "Login failed. Please try again."
       );
     } finally {
@@ -45,12 +55,8 @@ function Login() {
 
   return (
     <div className="auth-page">
-
       <div className="auth-card">
-
-        <div className="auth-logo">
-          unfazed.
-        </div>
+        <div className="auth-logo">unfazed.</div>
 
         <h1>Welcome back</h1>
 
@@ -59,10 +65,8 @@ function Login() {
         </p>
 
         <form onSubmit={handleLogin}>
-
           <div className="form-group">
             <label>Email</label>
-
             <input
               type="email"
               placeholder="you@example.com"
@@ -74,7 +78,6 @@ function Login() {
 
           <div className="form-group">
             <label>Password</label>
-
             <input
               type="password"
               placeholder="Enter your password"
@@ -97,7 +100,6 @@ function Login() {
           >
             {loading ? "Logging in..." : "Log in"}
           </button>
-
         </form>
 
         <p className="auth-switch">
@@ -114,11 +116,9 @@ function Login() {
           className="back-button"
           onClick={() => navigate("/")}
         >
-          ← Back to Unfazed
+          ← Back
         </button>
-
       </div>
-
     </div>
   );
 }

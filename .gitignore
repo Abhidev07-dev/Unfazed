@@ -1,7 +1,23 @@
+# Dependencies
 node_modules/
 **/node_modules/
+
+# Environment secrets
 .env
 .env.*
 !.env.example
+
+# Build files
 dist/
 build/
+
+# Personal files
+unfazed-backend/scripts/
+
+# Local diagnostic scripts
+unfazed-backend/check-*.js
+unfazed-backend/inspect-*.js
+unfazed-backend/compare-*.js
+unfazed-backend/match-*.js
+unfazed-backend/reassign-*.js
+unfazed-backend/repair-*.js

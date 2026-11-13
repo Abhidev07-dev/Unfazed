@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 
 const therapistSchema = new mongoose.Schema(
@@ -41,6 +42,31 @@ const therapistSchema = new mongoose.Schema(
     languages: {
       type: [String],
       default: []
+    },
+
+    // Subscription plan and access period
+    subscription: {
+      tier: {
+        type: String,
+        enum: ["free", "pro", "premium"],
+        default: "free"
+      },
+
+      status: {
+        type: String,
+        enum: ["active", "cancelled", "expired", "trial"],
+        default: "active"
+      },
+
+      startedAt: {
+        type: Date,
+        default: Date.now
+      },
+
+      expiresAt: {
+        type: Date,
+        default: null
+      }
     }
   },
   {

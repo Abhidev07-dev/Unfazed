@@ -1,44 +1,54 @@
+
 const jwt = require("jsonwebtoken");
 
 const authMiddleware = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
-    // Check if token exists
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         success: false,
-        message: "Authorization token required"
+        message: "Authorization token required.",
       });
     }
 
-    // Check Bearer format
-    if (!authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid authorization format"
-      });
-    }
-
-    // Get token
     const token = authHeader.split(" ")[1];
 
-    // Verify token
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Authorization token is missing.",
+      });
+    }
 
-    // Store decoded user information
-    req.therapist = decoded;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Continue to protected route
+    // Client tokens must use clientAuthMiddleware instead.
+    if (decoded.role === "client") {
+      return res.status(403).json({
+        success: false,
+        message: "Therapist account authentication is required.",
+      });
+    }
+
+    // Existing therapist tokens use the `id` claim.
+    if (!decoded.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Invalid therapist token.",
+      });
+    }
+
+    req.user = decoded;
+    req.therapist = {
+      id: decoded.id,
+    };
+
     next();
-
   } catch (error) {
     return res.status(401).json({
       success: false,
-      message: "Invalid or expired token"
+      message: "Invalid or expired authorization token.",
     });
   }
 };

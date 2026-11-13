@@ -1,5 +1,4 @@
 const crypto = require("crypto");
-
 const Razorpay = require("../config/razorpay");
 
 const Package = require("../models/Package");
@@ -195,6 +194,7 @@ const createPaymentOrder = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Payment order created",
+      keyId: process.env.RAZORPAY_KEY_ID,
       order: {
         id: order.id,
         amount: order.amount,

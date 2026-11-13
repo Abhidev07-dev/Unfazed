@@ -1,24 +1,23 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Dependencies
+node_modules/
+**/node_modules/
 
-node_modules
-dist
-dist-ssr
-*.local
+# Environment secrets
+.env
+.env.*
+!.env.example
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Build files
+dist/
+build/
+
+# Personal files
+unfazed-backend/scripts/
+
+# Local diagnostic scripts
+unfazed-backend/check-*.js
+unfazed-backend/inspect-*.js
+unfazed-backend/compare-*.js
+unfazed-backend/match-*.js
+unfazed-backend/reassign-*.js
+unfazed-backend/repair-*.js

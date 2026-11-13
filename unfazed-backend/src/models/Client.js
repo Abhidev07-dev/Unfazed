@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 
 const clientSchema = new mongoose.Schema(
@@ -5,35 +6,42 @@ const clientSchema = new mongoose.Schema(
     therapist: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Therapist",
-      required: true
+      required: true,
+      index: true
     },
 
     name: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
+      maxlength: 120
     },
 
     email: {
       type: String,
       required: true,
       lowercase: true,
-      trim: true
+      trim: true,
+      maxlength: 254
     },
 
     phone: {
       type: String,
-      default: ""
+      default: "",
+      trim: true,
+      maxlength: 30
     },
 
     presentingConcern: {
       type: String,
-      default: ""
+      default: "",
+      maxlength: 5000
     },
 
     history: {
       type: String,
-      default: ""
+      default: "",
+      maxlength: 10000
     },
 
     intakeData: {
@@ -50,6 +58,22 @@ const clientSchema = new mongoose.Schema(
       timestamp: {
         type: Date,
         default: null
+      },
+
+      version: {
+        type: String,
+        default: "1.0"
+      },
+
+      method: {
+        type: String,
+        enum: ["digital", "in-person", "other"],
+        default: "digital"
+      },
+
+      revokedAt: {
+        type: Date,
+        default: null
       }
     }
   },
@@ -58,10 +82,10 @@ const clientSchema = new mongoose.Schema(
   }
 );
 
-clientSchema.index({
-  therapist: 1,
-  email: 1
-});
+clientSchema.index(
+  { therapist: 1, email: 1 },
+  { unique: true }
+);
 
 const Client = mongoose.model("Client", clientSchema);
 
