@@ -3,6 +3,38 @@ const Availability = require("../models/Availability");
 const Session = require("../models/Session");
 const Client = require("../models/Client");
 
+const THERAPIST_TIMEZONE = "Asia/Kolkata";
+
+// Convert a UTC date into Indian weekday and clock time.
+function getIndianDateParts(date) {
+  const parts = new Intl.DateTimeFormat("en-IN", {
+    timeZone: THERAPIST_TIMEZONE,
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(date);
+
+  return Object.fromEntries(
+    parts.map(({ type, value }) => [type, value])
+  );
+}
+
+const WEEKDAY_MAP = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6
+};
+
+function toMinutes(time) {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
 // CREATE AVAILABILITY
 const createAvailability = async (req, res) => {
   try {
@@ -36,11 +68,6 @@ const createAvailability = async (req, res) => {
         message: "Times must use HH:mm format"
       });
     }
-
-    const toMinutes = (time) => {
-      const [hours, minutes] = time.split(":").map(Number);
-      return hours * 60 + minutes;
-    };
 
     if (toMinutes(endTime) <= toMinutes(startTime)) {
       return res.status(400).json({
@@ -198,11 +225,20 @@ const bookSession = async (req, res) => {
       });
     }
 
-    // Uses the server's local timezone.
-    // Configure a therapist timezone before production deployment.
-    const dayOfWeek = requestedDate.getDay();
+    // IMPORTANT:
+    // Availability is always evaluated in Indian Standard Time.
+    // Never use the Render server's local timezone here.
+    const dateParts = getIndianDateParts(requestedDate);
+
+    const dayOfWeek = WEEKDAY_MAP[dateParts.weekday];
+
+    if (dayOfWeek === undefined) {
+      throw new Error("Unable to determine Indian weekday");
+    }
+
     const startMinutes =
-      requestedDate.getHours() * 60 + requestedDate.getMinutes();
+      Number(dateParts.hour) * 60 +
+      Number(dateParts.minute);
 
     const availability = await Availability.find({
       therapist: req.therapist.id,
@@ -213,18 +249,20 @@ const bookSession = async (req, res) => {
     const fitsAvailability = availability.some((slot) => {
       const pattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
-      if (!pattern.test(slot.startTime) || !pattern.test(slot.endTime)) {
+      if (
+        !pattern.test(slot.startTime) ||
+        !pattern.test(slot.endTime)
+      ) {
         return false;
       }
 
-      const toMinutes = (time) => {
-        const [h, m] = time.split(":").map(Number);
-        return h * 60 + m;
-      };
-
       const start = toMinutes(slot.startTime);
       const end = toMinutes(slot.endTime);
-      const buffer = Math.max(0, Number(slot.bufferMinutes) || 0);
+
+      const buffer = Math.max(
+        0,
+        Number(slot.bufferMinutes) || 0
+      );
 
       return (
         end > start &&
@@ -241,6 +279,7 @@ const bookSession = async (req, res) => {
       });
     }
 
+    // Overlap checks use absolute timestamps (UTC).
     const requestedEnd = new Date(
       requestedDate.getTime() + sessionDuration * 60 * 1000
     );
@@ -253,6 +292,7 @@ const bookSession = async (req, res) => {
 
     const overlaps = existingSessions.some((session) => {
       const existingStart = new Date(session.date).getTime();
+
       const existingEnd =
         existingStart + Number(session.duration) * 60 * 1000;
 
@@ -287,6 +327,7 @@ const bookSession = async (req, res) => {
     });
   } catch (error) {
     console.error("Book session error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Server error"
@@ -311,6 +352,7 @@ const getMySessions = async (req, res) => {
     });
   } catch (error) {
     console.error("Get sessions error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Server error"
@@ -346,6 +388,7 @@ const getSessionNotes = async (req, res) => {
     }
 
     console.error("Get session notes error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Server error"
@@ -405,6 +448,7 @@ const updateSessionNotes = async (req, res) => {
     }
 
     console.error("Update session notes error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Server error"
