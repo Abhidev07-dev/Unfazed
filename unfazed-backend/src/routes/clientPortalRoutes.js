@@ -3,10 +3,47 @@ const express = require("express");
 const router = express.Router();
 
 const clientAuthMiddleware = require("../middleware/clientAuthMiddleware");
+
 const Session = require("../models/Session");
 const Payment = require("../models/Payment");
 const Availability = require("../models/Availability");
 const ClientPackage = require("../models/ClientPackage");
+const SessionNote = require("../models/SessionNote");
+
+// ======================================
+// TIMEZONE HELPER — INDIA (IST)
+// ======================================
+const getISTDateTime = (date) => {
+  const parts = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+
+  const values = {};
+
+  parts.forEach((part) => {
+    values[part.type] = part.value;
+  });
+
+  const days = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+
+  return {
+    dayOfWeek: days[values.weekday],
+    startMinutes:
+      Number(values.hour) * 60 + Number(values.minute),
+  };
+};
 
 // ======================================
 // CLIENT: VIEW OWN SESSIONS
@@ -26,6 +63,7 @@ router.get("/sessions", clientAuthMiddleware, async (req, res) => {
     return res.json({ sessions });
   } catch (error) {
     console.error("Client portal sessions error:", error.message);
+
     return res.status(500).json({
       message: "Unable to load sessions.",
     });
@@ -39,7 +77,6 @@ router.get("/sessions", clientAuthMiddleware, async (req, res) => {
 router.get("/shared-notes", clientAuthMiddleware, async (req, res) => {
   try {
     const { clientId, therapistId } = req.clientUser;
-    const SessionNote = require("../models/SessionNote");
 
     const notes = await SessionNote.find({
       client: clientId,
@@ -54,6 +91,7 @@ router.get("/shared-notes", clientAuthMiddleware, async (req, res) => {
     return res.json({ notes });
   } catch (error) {
     console.error("Client shared notes error:", error.message);
+
     return res.status(500).json({
       message: "Unable to load shared notes.",
     });
@@ -75,6 +113,7 @@ router.get("/payments", clientAuthMiddleware, async (req, res) => {
     return res.json({ payments });
   } catch (error) {
     console.error("Client portal payments error:", error.message);
+
     return res.status(500).json({
       message: "Unable to load payments.",
     });
@@ -96,6 +135,7 @@ router.get("/availability", clientAuthMiddleware, async (req, res) => {
     return res.json({ availability });
   } catch (error) {
     console.error("Client portal availability error:", error.message);
+
     return res.status(500).json({
       message: "Unable to load availability.",
     });
@@ -104,9 +144,10 @@ router.get("/availability", clientAuthMiddleware, async (req, res) => {
 
 // ======================================
 // CLIENT: BOOK SESSION USING ACTIVE PACKAGE
+// Uses IST for availability validation.
 // ======================================
 router.post("/book", clientAuthMiddleware, async (req, res) => {
-  let packageId;
+  let packageId = null;
   let packageCreditReserved = false;
 
   try {
@@ -116,6 +157,7 @@ router.post("/book", clientAuthMiddleware, async (req, res) => {
     const sessionDate = new Date(date);
     const sessionDuration = Number(duration);
 
+    // Validate date
     if (
       !date ||
       Number.isNaN(sessionDate.getTime()) ||
@@ -126,15 +168,17 @@ router.post("/book", clientAuthMiddleware, async (req, res) => {
       });
     }
 
+    // Validate duration
     if (![30, 45, 60, 90].includes(sessionDuration)) {
       return res.status(400).json({
         message: "Session duration must be 30, 45, 60, or 90 minutes.",
       });
     }
 
-    const dayOfWeek = sessionDate.getDay();
-    const startMinutes =
-      sessionDate.getHours() * 60 + sessionDate.getMinutes();
+    // Convert requested date to Indian Standard Time
+    const { dayOfWeek, startMinutes } =
+      getISTDateTime(sessionDate);
+
     const endMinutes = startMinutes + sessionDuration;
 
     const toMinutes = (time) => {
@@ -142,6 +186,7 @@ router.post("/book", clientAuthMiddleware, async (req, res) => {
       return hours * 60 + minutes;
     };
 
+    // Check therapist availability
     const availabilitySlots = await Availability.find({
       therapist: therapistId,
       dayOfWeek,
@@ -166,10 +211,13 @@ router.post("/book", clientAuthMiddleware, async (req, res) => {
       });
     }
 
+    // Calculate session end time
     const sessionEnd = new Date(
-      sessionDate.getTime() + sessionDuration * 60 * 1000
+      sessionDate.getTime() +
+        sessionDuration * 60 * 1000
     );
 
+    // Check for overlapping bookings
     const existingSessions = await Session.find({
       therapist: therapistId,
       status: "booked",
@@ -178,11 +226,16 @@ router.post("/book", clientAuthMiddleware, async (req, res) => {
 
     const hasConflict = existingSessions.some((session) => {
       const existingStart = new Date(session.date);
+
       const existingEnd = new Date(
-        existingStart.getTime() + session.duration * 60 * 1000
+        existingStart.getTime() +
+          session.duration * 60 * 1000
       );
 
-      return sessionDate < existingEnd && sessionEnd > existingStart;
+      return (
+        sessionDate < existingEnd &&
+        sessionEnd > existingStart
+      );
     });
 
     if (hasConflict) {
@@ -191,7 +244,7 @@ router.post("/book", clientAuthMiddleware, async (req, res) => {
       });
     }
 
-    // Reserve one session credit from an active, unexpired package.
+    // Reserve one credit from an active package
     const activePackage = await ClientPackage.findOneAndUpdate(
       {
         client: clientId,
@@ -201,7 +254,10 @@ router.post("/book", clientAuthMiddleware, async (req, res) => {
         expiryDate: { $gt: new Date() },
       },
       {
-        $inc: { remainingSessions: -1, usedSessions: 1 },
+        $inc: {
+          remainingSessions: -1,
+          usedSessions: 1,
+        },
       },
       {
         new: true,
@@ -219,6 +275,7 @@ router.post("/book", clientAuthMiddleware, async (req, res) => {
     packageId = activePackage._id;
     packageCreditReserved = true;
 
+    // Mark package completed when all credits are used
     if (activePackage.remainingSessions === 0) {
       await ClientPackage.updateOne(
         { _id: packageId },
@@ -226,6 +283,7 @@ router.post("/book", clientAuthMiddleware, async (req, res) => {
       );
     }
 
+    // Create session
     const session = await Session.create({
       therapist: therapistId,
       client: clientId,
@@ -239,16 +297,24 @@ router.post("/book", clientAuthMiddleware, async (req, res) => {
       session,
     });
   } catch (error) {
-    console.error("Client portal booking error:", error.message);
+    console.error(
+      "Client portal booking error:",
+      error.message
+    );
 
-    // Restore package credit if booking failed after reserving it.
+    // Restore package credit if booking failed
     if (packageCreditReserved && packageId) {
       try {
         await ClientPackage.updateOne(
           { _id: packageId },
           {
-            $inc: { remainingSessions: 1, usedSessions: -1 },
-            $set: { status: "active" },
+            $inc: {
+              remainingSessions: 1,
+              usedSessions: -1,
+            },
+            $set: {
+              status: "active",
+            },
           }
         );
       } catch (restoreError) {
